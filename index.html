@@ -163,12 +163,12 @@ color:#555;
 
 <script>
 
-const JSON="https://jtvp.byethost14.com/channels.json";
+const M3U="https://node-proxy-5d7s.onrender.com/playlist";
 
 let all=[];
 
 // LOAD
-fetch(JSON)
+fetch(M3U)
 .then(r=>r.text())
 .then(t=>{
 all=parse(t);
