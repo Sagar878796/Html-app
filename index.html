@@ -148,8 +148,8 @@ color:#555;
 
 <div class="icons">
 <div class="icon search" onclick="toggleSearch()">🔍</div>
-<div class="icon whatsapp" onclick="window.open(https://t.me/ipllivesdtv)">🔗</div>
-<div class="icon share" onclick="window.open(https://sagar878796.github.io/App)">📩</div>
+<div class="icon whatsapp" onclick="openTelegram()">🔗</div>
+<div class="icon share" onclick="sherealApp()">📩</div>
 </div>
 </header>
 
@@ -350,17 +350,27 @@ s.style.display=s.style.display==="block"?"none":"block";
 }
 
 // WHATSAPP
-function openWhatsApp(){
+function openTelegram(){
 if(window.Android){
 Android.openWhatsApp("https://t.me/ipllivesdtv");
-}
+    if(window.Android){
+        Android.openLink(url);
+    }else{
+        window.open(url);
+    }
 }
 
 // SHARE
 function shareApp(){
 if(window.Android){
 Android.shareApp("https://sagar878796.github.io/App");
-}
+
+    if(window.Android){
+        Android.shareApp(url);
+    }else{
+        navigator.share ? navigator.share({url}) : window.open(url);
+    }
+
 }
 
 </script>
