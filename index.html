@@ -143,13 +143,13 @@ color:#555;
 </div>  
 </header>  <input id="search" placeholder="Search..." oninput="searchChannels()">  <div id="banner"></div>  <div class="filters" id="filters"></div>  <div id="grid"><div class="loader"></div></div>  <script>  
   
-const M3U=[
-  "https://raspy-band-8d1e.sagarsutradhar046.workers.dev/"];
+const Json=[
+  "https://allinonereborn.online/jtv-fetch/jstr4web.json"];
   
 let all=[];  
   
 // LOAD  
-fetch(M3U)  
+fetch(Json)  
 .then(r=>r.text())  
 .then(t=>{  
 all=parse(t);  
