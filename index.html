@@ -283,7 +283,11 @@ fetch(JSON_URL)
 
         group : ch.category || "General",
 
-        url   : "channel/" + ch.fileName
+        /* FULL PLAYER URL */
+
+        url :
+        "https://sayan-jio-tv.pages.dev/channel/"
+        + ch.fileName
 
     }));
 
@@ -296,7 +300,8 @@ fetch(JSON_URL)
 .catch(err=>{
 
     document.getElementById("grid").innerHTML =
-    "<h2 style='color:white'>Failed To Load Channels</h2>";
+
+    "<h2 style='color:white;text-align:center'>Failed To Load Channels</h2>";
 
 });
 
@@ -366,11 +371,11 @@ grid.appendChild(frag);
 
 }
 
-/* PLAY */
+/* PLAY CHANNEL */
 
 function play(url){
 
-location.href = url;
+window.location.href = url;
 
 }
 
