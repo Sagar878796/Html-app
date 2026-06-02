@@ -1,508 +1,348 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>SDTV LIVE</title>
-
-<style>
-
-html,body{
-margin:0;
-padding:0;
-height:100vh;
-font-family:sans-serif;
-display:flex;
-flex-direction:column;
-overflow:hidden;
-background:#0026e6;
-}
-
-/* HEADER */
-
-header{
-background:#000;
-padding:10px 15px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-color:white;
-}
-
-.logo span:first-child{
-color:white;
-font-weight:900;
-}
-
-.logo span:last-child{
-color:red;
-font-weight:900;
-}
-
-.icons{
-display:flex;
-gap:10px;
-}
-
-.icon{
-width:35px;
-height:35px;
-border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-cursor:pointer;
-font-size:18px;
-}
-
-.search{
-background:red;
-}
-
-.share{
-background:#333;
-}
-
-/* SEARCH */
-
-#search{
-display:none;
-width:95%;
-margin:5px auto;
-padding:10px;
-border-radius:10px;
-border:2px solid red;
-outline:none;
-}
-
-/* BANNER */
-
-#banner{
-background:#0026e6;
-padding:15px;
-}
-
-.big{
-background:white;
-border-radius:12px;
-padding:10px;
-display:flex;
-gap:10px;
-align-items:center;
-cursor:pointer;
-}
-
-.big img{
-width:100px;
-height:100px;
-object-fit:contain;
-}
-
-.tag{
-color:red;
-font-weight:900;
-font-size:18px;
-}
-
-.title{
-font-size:18px;
-font-weight:bold;
-color:#000;
-margin-top:5px;
-}
-
-.sub{
-font-size:12px;
-color:#555;
-}
-
-/* FILTER */
-
-.filters{
-display:flex;
-gap:8px;
-padding:10px;
-overflow-x:auto;
-white-space:nowrap;
-background:#fff;
-}
-
-.filters::-webkit-scrollbar{
-display:none;
-}
-
-.btn{
-background:red;
-color:white;
-padding:6px 15px;
-border-radius:20px;
-cursor:pointer;
-flex-shrink:0;
-font-weight:bold;
-}
-
-.active{
-background:black;
-}
-
-/* GRID */
-
-#grid{
-flex:1;
-overflow-y:auto;
-background:#0026e6;
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:10px;
-padding:10px;
-}
-
-.item{
-background:#eee;
-border-radius:12px;
-padding:10px;
-text-align:center;
-cursor:pointer;
-transition:0.3s;
-}
-
-.item:hover{
-transform:scale(1.03);
-}
-
-.item img{
-width:60px;
-height:60px;
-object-fit:contain;
-}
-
-.item div{
-font-size:12px;
-font-weight:bold;
-margin-top:5px;
-}
-
-/* LOADER */
-
-.loader{
-width:40px;
-height:40px;
-border:4px solid #fff;
-border-top:4px solid red;
-border-radius:50%;
-animation:spin 1s linear infinite;
-margin:50px auto;
-}
-
-@keyframes spin{
-100%{
-transform:rotate(360deg);
-}
-}
-
-/* MOBILE */
-
-@media(max-width:700px){
-
-#grid{
-grid-template-columns:repeat(2,1fr);
-}
-
-.big img{
-width:80px;
-height:80px;
-}
-
-}
-
-</style>
-</head>
-
-<body>
-
-<header>
-
-<div class="logo">
-<span>SDTV</span><span>LIVE</span>
-</div>
-
-<div class="icons">
-
-<div class="icon search" onclick="toggleSearch()">
-🔍
-</div>
-
-<div class="icon share" onclick="shareApp()">
-📩
-</div>
-
-</div>
-
-</header>
-
-<input
-id="search"
-placeholder="Search Channels..."
-oninput="searchChannels()">
-
-<div id="banner"></div>
-
-<div class="filters" id="filters"></div>
-
-<div id="grid">
-
-<div class="loader"></div>
-
-</div>
-
-<script>
-
-/* JSON URL */
-
-const JSON_URL =
-"https://sayan-jio-tv.pages.dev/channel/channels.json";
-
-let all=[];
-
-/* LOAD JSON */
-
-fetch(JSON_URL)
-
-.then(r=>r.json())
-
-.then(data=>{
-
-    all = data.map(ch => ({
-
-        name  : ch.name || "Channel",
-
-        logo  : ch.logo || "",
-
-        group : ch.category || "General",
-
-        /* FULL PLAYER URL */
-
-        url :
-        "https://sayan-jio-tv.pages.dev/channel/"
-        + ch.fileName
-
-    }));
-
-    createFilters();
-
-    render(all);
-
-})
-
-.catch(err=>{
-
-    document.getElementById("grid").innerHTML =
-
-    "<h2 style='color:white;text-align:center'>Failed To Load Channels</h2>";
-
-});
-
-/* RENDER */
-
-function render(list){
-
-let grid=document.getElementById("grid");
-
-let banner=document.getElementById("banner");
-
-grid.innerHTML="";
-
-/* FEATURED */
-
-let f=list[0];
-
-if(f){
-
-banner.innerHTML = `
-
-<div class="big" onclick="play('${f.url}')">
-
-<img src="${f.logo}">
-
-<div>
-
-<div class="tag">FEATURED NOW</div>
-
-<div class="title">${f.name}</div>
-
-<div class="sub">Click to Play</div>
-
-</div>
-
-</div>
-
-`;
-
-}
-
-/* CHANNEL GRID */
-
-let frag=document.createDocumentFragment();
-
-list.forEach(c=>{
-
-let d=document.createElement("div");
-
-d.className="item";
-
-d.innerHTML=`
-
-<img src="${c.logo}" loading="lazy">
-
-<div>${c.name}</div>
-
-`;
-
-d.onclick=()=>play(c.url);
-
-frag.appendChild(d);
-
-});
-
-grid.appendChild(frag);
-
-}
-
-/* PLAY CHANNEL */
-
-function play(url){
-
-window.location.href = url;
-
-}
-
-/* FILTER BUTTONS */
-
-function createFilters(){
-
-let f=document.getElementById("filters");
-
-let groups=[...new Set(all.map(x=>x.group))];
-
-f.innerHTML=`
-
-<div class="btn active"
-onclick="filter('all',this)">
-All
-</div>
-
-`;
-
-groups.forEach(g=>{
-
-let d=document.createElement("div");
-
-d.className="btn";
-
-d.innerText=g;
-
-d.onclick=()=>filter(g,d);
-
-f.appendChild(d);
-
-});
-
-}
-
-/* FILTER */
-
-function filter(g,el){
-
-document
-.querySelectorAll('.btn')
-.forEach(b=>b.classList.remove('active'));
-
-el.classList.add('active');
-
-if(g==="all"){
-
-render(all);
-
-return;
-
-}
-
-render(
-
-all.filter(c=>
-
-c.group.toLowerCase()
-.includes(g.toLowerCase())
-
-)
-
-);
-
-}
-
-/* SEARCH */
-
-function searchChannels(){
-
-let t=document
-.getElementById("search")
-.value
-.toLowerCase();
-
-render(
-
-all.filter(c=>
-
-c.name.toLowerCase()
-.includes(t)
-
-)
-
-);
-
-}
-
-/* SEARCH TOGGLE */
-
-function toggleSearch(){
-
-let s=document.getElementById("search");
-
-s.style.display =
-s.style.display==="block"
-?
-"none"
-:
-"block";
-
-}
-
-/* SHARE */
-
-function shareApp(){
-
-if(navigator.share){
-
-navigator.share({
-
-title:"SDTV LIVE",
-
-url:location.href
-
-});
-
-}else{
-
-alert(location.href);
-
-}
-
-}
-
-</script>
-
-</body>
-</html>
+<!DOCTYPE html>  <html>  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>SDTV LIVE</title>  <style>  
+html,body{  
+margin:0;padding:0;height:100vh;  
+font-family:sans-serif;  
+display:flex;flex-direction:column;  
+overflow:hidden;  
+}  
+  
+/* HEADER */  
+header{  
+background:#000;  
+padding:10px 15px;  
+display:flex;justify-content:space-between;align-items:center;  
+color:white;  
+}  
+  
+.logo span:first-child{color:White;font-weight:900;}  
+.logo span:last-child{color:Red;font-weight:900;}  
+  
+.icons{display:flex;gap:10px;}  
+  
+.icon{  
+width:35px;height:35px;border-radius:50%;  
+display:flex;align-items:center;justify-content:center;  
+color:white;cursor:pointer;  
+}  
+.search{background:red;}  
+.whatsapp{background:#00ff08;border-radius:8px;}  
+.share{background:#333;}  
+  
+/* SEARCH */  
+#search{  
+display:none;  
+width:95%;margin:5px auto;  
+padding:10px;border-radius:10px;  
+border:2px solid red;  
+}  
+  
+/* BANNER */  
+#banner{  
+background:#0026e6;  
+padding:15px;  
+min-height:100px;   
+}  
+  
+.big{  
+background:white;  
+border-radius:12px;  
+padding:10px;  
+display:flex;gap:10px;  
+align-items:center;  
+cursor:pointer;  
+min-height:100px;   
+}  
+.big img{width:100px;height:100px;}  
+  
+/* FILTER */  
+.filters{  
+display:flex;  
+gap:8px;  
+padding:10px;  
+overflow-x:auto;  
+white-space:nowrap;  
+background:#fff;  
+}  
+.filters::-webkit-scrollbar{display:none;}  
+  
+.btn{  
+background:red;  
+color:white;  
+padding:6px 15px;  
+border-radius:20px;  
+cursor:pointer;  
+flex-shrink:0;  
+font-weight:bold;  
+}  
+.active{background:black;}  
+  
+/* GRID */  
+#grid{  
+flex:1;  
+overflow-y:auto;  
+background:#0026e6;  
+display:grid;  
+grid-template-columns:repeat(3,1fr);  
+gap:10px;  
+padding:10px;  
+}  
+  
+.item{  
+background:#eee;  
+border-radius:12px;  
+padding:10px;  
+text-align:center;  
+cursor:pointer;  
+}  
+.item img{  
+width:60px;height:60px;  
+object-fit:contain;  
+}  
+.item div{  
+font-size:12px;font-weight:bold;  
+margin-top:5px;  
+}  
+  
+.loader{  
+width:40px;height:40px;  
+border:4px solid #fff;  
+border-top:4px solid red;  
+border-radius:50%;  
+animation:spin 1s linear infinite;  
+margin:50px auto;  
+}  
+@keyframes spin{100%{transform:rotate(360deg);}  
+}  
+.tag{  
+color:red;  
+font-weight:900;  
+font-size:19px;  
+letter-spacing:1px;  
+}  
+  
+.title{  
+font-size:18px;  
+font-weight:bold;  
+color:#000;  
+margin-top:3px;  
+}  
+  
+.sub{  
+font-size:12px;  
+color:#555;  
+}  
+</style>  </head>  <body>  <header>  
+<div class="logo"><span>SDTV</span><span>LIVE</span></div>  <div class="icons">  
+<div class="icon search" onclick="toggleSearch()">🔍</div>  
+<div class="icon whatsapp" onclick="https://t.me/ipllivesdtv()">🔗</div>  
+<div class="icon share" onclick="https://sagar878796.github.io/App()">📩</div>  
+</div>  
+</header>  <input id="search" placeholder="Search..." oninput="searchChannels()">  <div id="banner"></div>  <div class="filters" id="filters"></div>  <div id="grid"><div class="loader"></div></div>  <script>  
+  
+const M3U="https://raw.githubusercontent.com/Sagar878796/Nagin/refs/heads/main/playlist.m3u";  
+  
+let all=[];  
+  
+// LOAD  
+fetch(M3U)  
+.then(r=>r.text())  
+.then(t=>{  
+all=parse(t);  
+createFilters();  
+render(all);  
+});  
+  
+// PARSE  
+function parse(t) {  
+    let lines = t.split("\n");  
+    let list = [];  
+      
+    // Java ki tarah variables initialize  
+    let name = "", logo = "", group = "", drm = "";  
+    let headers = {}; // Ye Java ka LinkedHashMap hai  
+  
+    for (let l of lines) {  
+        l = l.trim();  
+  
+        if (l.startsWith("#EXTINF")) {  
+            // Java: logo, group aur name extract karna  
+            logo = l.match(/tvg-logo="([^"]+)"/)?.[1] || "";  
+            group = l.match(/group-title="([^"]+)"/)?.[1] || "General";  
+            name = l.includes(",") ? l.substring(l.lastIndexOf(",") + 1).trim() : "Channel";  
+              
+            // Java: headers.clear() aur drm=""  
+            headers = {};  
+            drm = "";  
+        }  
+        // Java: else if(line.toLowerCase().contains("license_key"))  
+        else if (l.toLowerCase().includes("license_key")) {  
+            drm = l.split("=", 2)[1].trim();  
+        }  
+        // Java: else if(line.startsWith("#EXTHTTP"))  
+        else if (l.startsWith("#EXTHTTP")) {  
+            try {  
+                let jsonStr = l.substring(l.indexOf("{"), l.lastIndexOf("}") + 1);  
+                let obj = JSON.parse(jsonStr);  
+                for (let k in obj) { headers[k] = obj[k]; }  
+            } catch (e) {}  
+        }  
+        // Java: else if(line.startsWith("#EXTVLCOPT:"))  
+        else if (l.startsWith("#EXTVLCOPT:")) {  
+            let data = l.substring(11);  
+            let p = data.split("=", 2);  
+            if (p.length === 2) headers[p[0].trim()] = p[1].trim();  
+        }  
+        // Java: else if(line.matches("^(http|https|rtmp|rtsp|udp).*"))  
+        else if (l.startsWith("http") || l.startsWith("rtmp") || l.startsWith("rtsp")) {  
+            if (name !== "") {  
+                let finalUrl = l;  
+  
+                // Java: if(!drm.isEmpty()) { headers.put("drmScheme","clearkey"); headers.put("drmLicense",drm); }  
+                if (drm !== "") {  
+                    headers["drmScheme"] = "clearkey";  
+                    headers["drmLicense"] = drm;  
+                }  
+  
+                // Java: if(!headers.isEmpty()) { StringBuilder sb=new StringBuilder(line+"?|"); ... }  
+                let headerKeys = Object.keys(headers);  
+                if (headerKeys.length > 0) {  
+                    let sb = l + "?|";  
+                    let params = [];  
+                    for (let k in headers) {  
+                        params.push(k + "=" + headers[k]);  
+                    }  
+                    finalUrl = sb + params.join("&");  
+                }  
+  
+                list.push({  
+                    name: name,  
+                    logo: logo,  
+                    group: group,  
+                    url: finalUrl // Ye ab exact Java wala formatted link hai  
+                });  
+                  
+                name = ""; // Java ki tarah reset  
+            }  
+        }  
+    }  
+    return list;  
+}  
+  
+// FINAL LINK  
+function build(c){  
+    let p=[];  
+    if(c.cookie) p.push("cookie="+c.cookie);  
+    if(c.ua) p.push("User-agent="+c.ua);  
+    if(c.origin) p.push("origin="+c.origin);  
+    if(c.ref) p.push("Referer="+c.ref);  
+    if(c.key){  
+        p.push("drmScheme=clearkey");  
+        p.push("drmLicense="+c.key);  
+    }  
+  
+    return p.length ? c.url+"?|"+p.join("&") : c.url;  
+}  
+  
+// RENDER  
+function render(list){  
+let grid=document.getElementById("grid");  
+let banner=document.getElementById("banner");  
+  
+grid.innerHTML="";  
+  
+let f=list[0];  
+  
+banner.innerHTML = `  
+<div class="big" onclick="play('${f.name}')">  
+  <img src="${f.logo}" loading="lazy">  
+  <div>  
+    <div class="tag">FEATURED NOW</div>  
+    <div class="title">${f.name}</div>  
+    <div class="sub">Click to play</div>  
+  </div>  
+</div>  
+`;  
+  
+let frag=document.createDocumentFragment();  
+  
+list.forEach(c=>{  
+let d=document.createElement("div");  
+d.className="item";  
+d.innerHTML=`<img src="${c.logo}" loading="lazy"><div>${c.name}</div>`;  
+d.onclick=()=>play(c.name);  
+frag.appendChild(d);  
+});  
+  
+grid.appendChild(frag);  
+}  
+  
+function play(n){  
+let c=all.find(x=>x.name===n);  
+let link = build(c);  
+  
+if(window.Android){  
+Android.playChannel(link);  
+}else{  
+alert(link);  
+}  
+}  
+  
+// FILTER BUTTON AUTO  
+function createFilters(){  
+let f=document.getElementById("filters");  
+let groups=[...new Set(all.map(x=>x.group))];  
+  
+f.innerHTML=`<div class="btn active" onclick="filter('all',this)">All</div>`;  
+  
+groups.forEach(g=>{  
+let d=document.createElement("div");  
+d.className="btn";  
+d.innerText=g;  
+d.onclick=()=>filter(g,d);  
+f.appendChild(d);  
+});  
+}  
+  
+// FILTER  
+function filter(g,el){  
+document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));  
+el.classList.add('active');  
+  
+if(g==="all") return render(all);  
+  
+render(all.filter(c=>c.group.toLowerCase().includes(g.toLowerCase())));  
+}  
+  
+// SEARCH  
+function searchChannels(){  
+let t=document.getElementById("search").value.toLowerCase();  
+render(all.filter(c=>c.name.toLowerCase().includes(t)));  
+}  
+  
+// SEARCH TOGGLE  
+function toggleSearch(){  
+let s=document.getElementById("search");  
+s.style.display=s.style.display==="block"?"none":"block";  
+}  
+  
+// WHATSAPP  
+function openWhatsApp(){  
+if(window.Android){  
+Android.openWhatsApp();  
+}  
+}  
+  
+// SHARE  
+function shareApp(){  
+if(window.Android){  
+Android.shareApp(location.href);  
+}  
+}  
+  
+</script>  </body>  
+</html>   
+ENJOY AND FUN 😊
