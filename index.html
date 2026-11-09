@@ -1,348 +1,988 @@
-<!DOCTYPE html>  <html>  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
-<title>SDTV LIVE</title>  <style>  
-html,body{  
-margin:0;padding:0;height:100vh;  
-font-family:sans-serif;  
-display:flex;flex-direction:column;  
-overflow:hidden;  
-}  
-  
-/* HEADER */  
-header{  
-background:#000;  
-padding:10px 15px;  
-display:flex;justify-content:space-between;align-items:center;  
-color:white;  
-}  
-  
-.logo span:first-child{color:White;font-weight:900;}  
-.logo span:last-child{color:Red;font-weight:900;}  
-  
-.icons{display:flex;gap:10px;}  
-  
-.icon{  
-width:35px;height:35px;border-radius:50%;  
-display:flex;align-items:center;justify-content:center;  
-color:white;cursor:pointer;  
-}  
-.search{background:red;}  
-.whatsapp{background:#00ff08;border-radius:8px;}  
-.share{background:#333;}  
-  
-/* SEARCH */  
-#search{  
-display:none;  
-width:95%;margin:5px auto;  
-padding:10px;border-radius:10px;  
-border:2px solid red;  
-}  
-  
-/* BANNER */  
-#banner{  
-background:#0026e6;  
-padding:15px;  
-min-height:100px;   
-}  
-  
-.big{  
-background:white;  
-border-radius:12px;  
-padding:10px;  
-display:flex;gap:10px;  
-align-items:center;  
-cursor:pointer;  
-min-height:100px;   
-}  
-.big img{width:100px;height:100px;}  
-  
-/* FILTER */  
-.filters{  
-display:flex;  
-gap:8px;  
-padding:10px;  
-overflow-x:auto;  
-white-space:nowrap;  
-background:#fff;  
-}  
-.filters::-webkit-scrollbar{display:none;}  
-  
-.btn{  
-background:red;  
-color:white;  
-padding:6px 15px;  
-border-radius:20px;  
-cursor:pointer;  
-flex-shrink:0;  
-font-weight:bold;  
-}  
-.active{background:black;}  
-  
-/* GRID */  
-#grid{  
-flex:1;  
-overflow-y:auto;  
-background:#0026e6;  
-display:grid;  
-grid-template-columns:repeat(3,1fr);  
-gap:10px;  
-padding:10px;  
-}  
-  
-.item{  
-background:#eee;  
-border-radius:12px;  
-padding:10px;  
-text-align:center;  
-cursor:pointer;  
-}  
-.item img{  
-width:60px;height:60px;  
-object-fit:contain;  
-}  
-.item div{  
-font-size:12px;font-weight:bold;  
-margin-top:5px;  
-}  
-  
-.loader{  
-width:40px;height:40px;  
-border:4px solid #fff;  
-border-top:4px solid red;  
-border-radius:50%;  
-animation:spin 1s linear infinite;  
-margin:50px auto;  
-}  
-@keyframes spin{100%{transform:rotate(360deg);}  
-}  
-.tag{  
-color:red;  
-font-weight:900;  
-font-size:19px;  
-letter-spacing:1px;  
-}  
-  
-.title{  
-font-size:18px;  
-font-weight:bold;  
-color:#000;  
-margin-top:3px;  
-}  
-  
-.sub{  
-font-size:12px;  
-color:#555;  
-}  
-</style>  </head>  <body>  <header>  
-<div class="logo"><span>SDTV</span><span>LIVE</span></div>  <div class="icons">  
-<div class="icon search" onclick="toggleSearch()">🔍</div>  
-<div class="icon whatsapp" onclick="https://t.me/ipllivesdtv()">🔗</div>  
-<div class="icon share" onclick="https://sagar878796.github.io/App()">📩</div>  
-</div>  
-</header>  <input id="search" placeholder="Search..." oninput="searchChannels()">  <div id="banner"></div>  <div class="filters" id="filters"></div>  <div id="grid"><div class="loader"></div></div>  <script>  
-  
-const M3U="https://sportlink-playlist.pages.dev/Combined.m3u";  
-  
-let all=[];  
-  
-// LOAD  
-fetch(M3U)  
-.then(r=>r.text())  
-.then(t=>{  
-all=parse(t);  
-createFilters();  
-render(all);  
-});  
-  
-// PARSE  
-function parse(t) {  
-    let lines = t.split("\n");  
-    let list = [];  
-      
-    // Java ki tarah variables initialize  
-    let name = "", logo = "", group = "", drm = "";  
-    let headers = {}; // Ye Java ka LinkedHashMap hai  
-  
-    for (let l of lines) {  
-        l = l.trim();  
-  
-        if (l.startsWith("#EXTINF")) {  
-            // Java: logo, group aur name extract karna  
-            logo = l.match(/tvg-logo="([^"]+)"/)?.[1] || "";  
-            group = l.match(/group-title="([^"]+)"/)?.[1] || "General";  
-            name = l.includes(",") ? l.substring(l.lastIndexOf(",") + 1).trim() : "Channel";  
-              
-            // Java: headers.clear() aur drm=""  
-            headers = {};  
-            drm = "";  
-        }  
-        // Java: else if(line.toLowerCase().contains("license_key"))  
-        else if (l.toLowerCase().includes("license_key")) {  
-            drm = l.split("=", 2)[1].trim();  
-        }  
-        // Java: else if(line.startsWith("#EXTHTTP"))  
-        else if (l.startsWith("#EXTHTTP")) {  
-            try {  
-                let jsonStr = l.substring(l.indexOf("{"), l.lastIndexOf("}") + 1);  
-                let obj = JSON.parse(jsonStr);  
-                for (let k in obj) { headers[k] = obj[k]; }  
-            } catch (e) {}  
-        }  
-        // Java: else if(line.startsWith("#EXTVLCOPT:"))  
-        else if (l.startsWith("#EXTVLCOPT:")) {  
-            let data = l.substring(11);  
-            let p = data.split("=", 2);  
-            if (p.length === 2) headers[p[0].trim()] = p[1].trim();  
-        }  
-        // Java: else if(line.matches("^(http|https|rtmp|rtsp|udp).*"))  
-        else if (l.startsWith("http") || l.startsWith("rtmp") || l.startsWith("rtsp")) {  
-            if (name !== "") {  
-                let finalUrl = l;  
-  
-                // Java: if(!drm.isEmpty()) { headers.put("drmScheme","clearkey"); headers.put("drmLicense",drm); }  
-                if (drm !== "") {  
-                    headers["drmScheme"] = "clearkey";  
-                    headers["drmLicense"] = drm;  
-                }  
-  
-                // Java: if(!headers.isEmpty()) { StringBuilder sb=new StringBuilder(line+"?|"); ... }  
-                let headerKeys = Object.keys(headers);  
-                if (headerKeys.length > 0) {  
-                    let sb = l + "?|";  
-                    let params = [];  
-                    for (let k in headers) {  
-                        params.push(k + "=" + headers[k]);  
-                    }  
-                    finalUrl = sb + params.join("&");  
-                }  
-  
-                list.push({  
-                    name: name,  
-                    logo: logo,  
-                    group: group,  
-                    url: finalUrl // Ye ab exact Java wala formatted link hai  
-                });  
-                  
-                name = ""; // Java ki tarah reset  
-            }  
-        }  
-    }  
-    return list;  
-}  
-  
-// FINAL LINK  
-function build(c){  
-    let p=[];  
-    if(c.cookie) p.push("cookie="+c.cookie);  
-    if(c.ua) p.push("User-agent="+c.ua);  
-    if(c.origin) p.push("origin="+c.origin);  
-    if(c.ref) p.push("Referer="+c.ref);  
-    if(c.key){  
-        p.push("drmScheme=clearkey");  
-        p.push("drmLicense="+c.key);  
-    }  
-  
-    return p.length ? c.url+"?|"+p.join("&") : c.url;  
-}  
-  
-// RENDER  
-function render(list){  
-let grid=document.getElementById("grid");  
-let banner=document.getElementById("banner");  
-  
-grid.innerHTML="";  
-  
-let f=list[0];  
-  
-banner.innerHTML = `  
-<div class="big" onclick="play('${f.name}')">  
-  <img src="${f.logo}" loading="lazy">  
-  <div>  
-    <div class="tag">FEATURED NOW</div>  
-    <div class="title">${f.name}</div>  
-    <div class="sub">Click to play</div>  
-  </div>  
-</div>  
-`;  
-  
-let frag=document.createDocumentFragment();  
-  
-list.forEach(c=>{  
-let d=document.createElement("div");  
-d.className="item";  
-d.innerHTML=`<img src="${c.logo}" loading="lazy"><div>${c.name}</div>`;  
-d.onclick=()=>play(c.name);  
-frag.appendChild(d);  
-});  
-  
-grid.appendChild(frag);  
-}  
-  
-function play(n){  
-let c=all.find(x=>x.name===n);  
-let link = build(c);  
-  
-if(window.Android){  
-Android.playChannel(link);  
-}else{  
-alert(link);  
-}  
-}  
-  
-// FILTER BUTTON AUTO  
-function createFilters(){  
-let f=document.getElementById("filters");  
-let groups=[...new Set(all.map(x=>x.group))];  
-  
-f.innerHTML=`<div class="btn active" onclick="filter('all',this)">All</div>`;  
-  
-groups.forEach(g=>{  
-let d=document.createElement("div");  
-d.className="btn";  
-d.innerText=g;  
-d.onclick=()=>filter(g,d);  
-f.appendChild(d);  
-});  
-}  
-  
-// FILTER  
-function filter(g,el){  
-document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));  
-el.classList.add('active');  
-  
-if(g==="all") return render(all);  
-  
-render(all.filter(c=>c.group.toLowerCase().includes(g.toLowerCase())));  
-}  
-  
-// SEARCH  
-function searchChannels(){  
-let t=document.getElementById("search").value.toLowerCase();  
-render(all.filter(c=>c.name.toLowerCase().includes(t)));  
-}  
-  
-// SEARCH TOGGLE  
-function toggleSearch(){  
-let s=document.getElementById("search");  
-s.style.display=s.style.display==="block"?"none":"block";  
-}  
-  
-// WHATSAPP  
-function openWhatsApp(){  
-if(window.Android){  
-Android.openWhatsApp();  
-}  
-}  
-  
-// SHARE  
-function shareApp(){  
-if(window.Android){  
-Android.shareApp(location.href);  
-}  
-}  
-  
-</script>  </body>  
-</html>   
-                 ENJOY AND FUN 😊
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>JioStar +</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="preload" href="gemini.png" as="image">
+    <style>
+        /* --- 1. CONFIG & COLORS --- */
+        :root {
+            --bg: #050505;
+            --card-bg: #000000;
+            --text: #ffffff;
+            --primary: #ff007f;
+            --secondary: #00d2ff;
+            --modal-bg: #0a0a0a;
+            --border: rgba(255, 255, 255, 0.1);
+            --selection: linear-gradient(to right, #ff007f, #ffffff);
+            --chip-bg: rgba(255, 255, 255, 0.06);
+        }
+
+        /* --- Selection Border Logic (TV Focus) --- */
+        [tabindex="0"]:focus {
+            outline: none !important;
+            border: 3.8px solid transparent !important;
+            background-image: linear-gradient(var(--bg), var(--bg)), var(--selection) !important;
+            background-origin: border-box !important;
+            background-clip: padding-box, border-box !important;
+            transform: scale(1.08);
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.5), 0 0 30px rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .menu-trigger, .search-icon-btn { border-radius: 38% !important; }
+        .menu-opt { border-radius: 14px !important; }
+
+        body.light-theme {
+            --bg: #f2f2f7;
+            --card-bg: #ffffff;
+            --text: #000000;
+            --border: rgba(0, 0, 0, 0.1);
+            --chip-bg: rgba(0, 0, 0, 0.06);
+        }
+
+        body.light-theme header, body.light-theme .sidebar, body.light-theme .search-tab {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+
+        body.light-theme .menu-opt, body.light-theme .cat-title { color: #000000 !important; }
+        body.light-theme .modal { background: #ffffff !important; color: #000000 !important; }
+
+        body.light-theme .dev-card {
+            background: #f5f5f5 !important;
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+
+        body.light-theme .modal-header-brand,
+        body.light-theme .dev-meta .name,
+        body.light-theme .feat-item { color: #000000 !important; }
+
+        body.light-theme .close-modal-btn { background: #000000; color: #ffffff; }
+
+        body.light-theme [tabindex="0"]:focus {
+            background-image: linear-gradient(var(--card-bg), var(--card-bg)), var(--selection) !important;
+        }
+
+        /* --- 2. BASE RESET --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
+        html, body { height: 100%; margin: 0; scroll-behavior: smooth; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+
+        .app-shell, footer { opacity: 0; visibility: hidden; }
+        body.loaded .app-shell, body.loaded footer { opacity: 1; visibility: visible; }
+
+        /* --- 3. PREMIUM SPLASH --- */
+        #splash-screen {
+            position: fixed; inset: 0; z-index: 10000;
+            background-image: url('gemini.png'); background-size: cover; background-position: center; background-repeat: no-repeat;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.6s ease;
+        }
+        .splash-logo-img { width: 350px; height: auto; margin-bottom: 8px; object-fit: contain; animation: splashZoom 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; filter: drop-shadow(0 10px 40px rgba(0,0,0,0.5)); }
+
+        .loading-bar { width: 120px; height: 2px; background: rgba(255,255,255,0.1); margin-top: 4px; position: relative; border-radius: 10px; overflow: hidden; }
+        .loading-bar::after {
+            content: ''; position: absolute; width: 40%; height: 100%; background: #ffffff;
+            transform: translateX(-100%); animation: load 1.5s linear infinite;
+            will-change: transform; box-shadow: 0 0 8px #ffffff, 0 0 16px rgba(255,255,255,0.8);
+        }
+        @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+        @keyframes splashZoom { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* ─── NEW: LOADING SPINNER (For content area) ─── */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 20px;
+            gap: 24px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            position: relative;
+            background: conic-gradient(from 0deg, transparent 0deg, #ff007f 90deg, #ffffff 180deg, transparent 270deg);
+            animation: spinnerRotate 1s linear infinite;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            filter: drop-shadow(0 0 8px rgba(255, 0, 127, 0.5));
+        }
+
+        .loading-spinner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent, #ff007f, #ffffff, transparent);
+            animation: spinnerRotate 1s linear infinite;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+        }
+
+        @keyframes spinnerRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            opacity: 0.7;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 4px;
+        }
+
+        .loading-dots span {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: dotBounce 1.4s infinite ease-in-out both;
+            box-shadow: 0 0 6px rgba(255, 0, 127, 0.6);
+        }
+
+        .loading-dots span:nth-child(1) { animation-delay: 0s; }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotBounce {
+            0%, 80%, 100% {
+                transform: scale(0.6);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* --- 4. HEADER --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 19px 20px; position: fixed; top: 0; width: 100%;
+            background: var(--bg); backdrop-filter: blur(25px);
+            z-index: 1000; border-bottom: 1px solid var(--border);
+        }
+        .nav-left { display: flex; align-items: center; gap: 15px; }
+        .logo { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+        .logo span { color: var(--primary); text-shadow: 0 0 15px var(--primary); }
+
+        /* --- 5. SIDEBAR --- */
+        .sidebar { position: fixed; top: 0; left: -320px; width: 300px; height: 100%; background: var(--bg); z-index: 2000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 50px 0 20px; }
+        .sidebar.open { left: 0; }
+        .sidebar-brand { padding: 0 25px 5px; font-size: 26px; font-weight: 800; }
+        .sidebar-brand span { color: var(--primary); }
+        .sidebar-tagline { padding: 0 25px 15px; font-size: 11px; font-weight: 700; color: var(--text); opacity: 0.65; letter-spacing: 0.3px; }
+        .sidebar-divider { height: 1px; background: var(--border); margin: 0 0 15px; }
+
+        .menu-list { padding: 20px 12px; flex: 1; }
+        .menu-opt { display: flex; align-items: center; gap: 15px; padding: 14px 15px; margin-bottom: 5px; cursor: pointer; transition: 0.2s; font-weight: 600; color: var(--text); opacity: 0.8; }
+        .menu-opt svg { width: 22px; height: 22px; stroke: var(--primary); fill: none; stroke-width: 2; }
+
+        /* --- 6. MODALS --- */
+        .modal {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%; max-width: 360px;
+            background: var(--modal-bg); border: 2px solid var(--primary);
+            padding: 30px; border-radius: 40px;
+            z-index: 10005; display: none;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 1); text-align: center;
+        }
+        .modal.show { display: block; animation: modalIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .modal-header-brand { font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 25px; letter-spacing: -1.5px; }
+        .modal-header-brand span { color: var(--primary); }
+
+        .dev-card {
+            background: var(--modal-bg); padding: 15px 20px; border-radius: 25px;
+            display: flex; align-items: center; gap: 15px; margin-bottom: 30px;
+            text-align: left; border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .dev-avatar { width: 50px; height: 50px; background: var(--primary); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
+        .dev-avatar svg { width: 28px; fill: white; }
+        .dev-meta .label { font-size: 10px; font-weight: 800; color: var(--primary); letter-spacing: 1px; }
+        .dev-meta .name { font-size: 18px; font-weight: 700; color: #fff; }
+
+        .feature-list { margin-bottom: 30px; padding: 0 10px; }
+        .feat-item { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; color: #eee; font-size: 14px; font-weight: 500; }
+        .feat-item svg { width: 20px; height: 20px; fill: var(--primary); filter: drop-shadow(0 0 5px var(--primary)); }
+
+        .close-modal-btn {
+            width: 100%; padding: 16px; border-radius: 50px; border: none;
+            background: #ffffff; color: #000; font-weight: 800; font-size: 15px;
+            cursor: pointer; text-transform: uppercase;
+        }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2999; opacity: 0; visibility: hidden; transition: .3s ease; }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+
+        .app-version { font-size: 10px; font-weight: 700; color: var(--text); opacity: 0.9; letter-spacing: 1.5px; text-transform: uppercase; margin-top: -5px; margin-bottom: 20px; }
+        body.light-theme .app-version { color: #000; opacity: 0.5; }
+
+        .close-modal-btn:focus {
+            outline: none !important; border: 3.5px solid transparent !important;
+            background-image: linear-gradient(#ffffff, #ffffff), linear-gradient(to right, #ff007f, #ffffff) !important;
+            background-origin: border-box !important;
+            background-clip: padding-box, border-box !important;
+            transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+            transition: all 0.2s ease;
+        }
+        body.light-theme .close-modal-btn:focus {
+            background-image: linear-gradient(#000000, #000000), linear-gradient(to right, #ff007f, #ffffff) !important;
+            color: #fff !important;
+        }
+
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1500; display: none; }
+        .overlay.show { display: block; }
+
+        .tg-custom { margin-top: 20px !important; background: var(--secondary) !important; color: #000 !important; opacity: 1 !important; border-radius: 14px !important; transition: 0.2s; }
+        .tg-custom svg { stroke: #000 !important; }
+        .tg-custom:focus { color: #ffffff !important; }
+        .tg-custom:focus svg { stroke: #ffffff !important; }
+
+        /* --- LIVE STATS ROW --- */
+        .stats-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 0; margin-top: 85px; }
+        .stats-left-text { font-size: 15px; font-weight: 600; color: var(--text); opacity: 0.5; letter-spacing: 0.2px; }
+        .channels-pill {
+            background: linear-gradient(to right, #ff007f, #ffffff); color: #FFF;
+            padding: 7px 16px; border-radius: 50px; font-size: 12px; font-weight: 800;
+            text-transform: uppercase; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.2); display: none;
+        }
+        body.light-theme .stats-left-text { color: #000; opacity: 0.6; }
+
+        /* ─── CATEGORY CHIPS ─── */
+        .chips-wrapper { padding: 10px 15px 0; overflow: hidden; position: relative; }
+        .chips-scroll {
+            display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
+            padding: 6px 0 10px 0; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .chips-scroll::-webkit-scrollbar { display: none; }
+
+        .chip {
+            flex: 0 0 auto; padding: 6px 14px; border-radius: 50px;
+            background: var(--chip-bg); border: 1.5px solid var(--border);
+            color: var(--text); font-size: 11.5px; font-weight: 600;
+            font-family: 'Outfit', sans-serif; cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap; touch-action: manipulation;
+            -webkit-touch-callout: none;
+        }
+
+        .chip:focus {
+            outline: none; transform: scale(1.05);
+            background-image: linear-gradient(var(--bg), var(--bg)), var(--selection);
+            background-origin: border-box; background-clip: padding-box, border-box;
+            border: 1.5px solid transparent; color: var(--text);
+            box-shadow: 0 0 8px rgba(255, 0, 127, 0.25);
+        }
+        body.light-theme .chip:focus {
+            background-image: linear-gradient(#ffffff, #ffffff), var(--selection);
+            color: #000000;
+        }
+        .chip.active {
+            background: var(--selection); background-image: var(--selection);
+            border-color: transparent; color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.25);
+        }
+        .chip.active:focus {
+            background: var(--selection); background-image: var(--selection);
+            border-color: transparent; color: #ffffff;
+            box-shadow: 0 0 14px rgba(255, 0, 127, 0.45);
+            transform: scale(1.06);
+        }
+
+        /* --- 7. CONTENT --- */
+        #content-area { padding: 0px 15px 50px; }
+        .cat-title {
+            font-size: 19px; font-weight: 800; margin: 30px 0 15px 5px;
+            display: flex; align-items: center; color: #ffffff;
+        }
+        .cat-title::before { content: '|'; color: var(--primary); margin-right: 12px; font-weight: 900; font-size: 24px; text-shadow: 0 0 15px var(--primary); }
+
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        @media (min-width: 768px) { .grid { grid-template-columns: repeat(5, 1fr); gap: 20px; } }
+
+                .card {
+            background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border);
+            aspect-ratio: 1/1.35; overflow: hidden; position: relative; cursor: pointer;
+            transition: 0.3s ease;
+
+            /* ✅ SHADOW EFFECT */
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.5),
+                0 8px 24px rgba(0, 0, 0, 0.35),
+                0 2px 6px rgba(255, 0, 127, 0.08);
+        }
+
+        /* ✅ HOVER — Shadow aur bada + pink glow */
+        .card:hover {
+            box-shadow:
+                0 8px 20px rgba(0, 0, 0, 0.6),
+                0 12px 36px rgba(0, 0, 0, 0.45),
+                0 4px 12px rgba(255, 0, 127, 0.2);
+            transform: translateY(-3px);
+        }
+
+        /* ✅ FOCUS (TV) — Pink glow ke saath premium shadow */
+        .card:focus {
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.7),
+                0 0 25px rgba(255, 0, 127, 0.5),
+                0 0 50px rgba(255, 0, 127, 0.25);
+        }
+
+        .live-dot-wrap { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 900; }
+        .dot { height: 8px; width: 8px; background:#ff0000; border-radius: 50%; box-shadow: 0 0 8px var(--primary); animation: breathe 1.5s infinite; }
+        @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .card-img { height: 75%; display: flex; align-items: center; justify-content: center; padding: 12px; }
+        .card-img img { max-width: 90%; max-height: 85%; object-fit: contain; }
+        .card-footer { height: 25%; display: flex; align-items: center; justify-content: center; padding: 0 10px; font-size: 10px; font-weight: 700; text-align: center; border-top: 1px solid var(--border); }
+        .search-icon-btn { color: #ff007f; }
+
+        .search-tab { position: fixed; top: 70px; left: 0; width: 100%; padding: 15px 20px; background: var(--bg); z-index: 999; display: none; border-bottom: 1px solid var(--primary); }
+        .search-bar {
+            background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+                linear-gradient(135deg, #ff007f, #ffffff) border-box;
+            border: 2.5px solid transparent; border-radius: 50px;
+            padding: 10px 20px; display: flex; align-items: center;
+            box-shadow: 0 0 8px rgba(255, 0, 127, 0.4), 0 0 16px rgba(255, 0, 127, 0.25);
+        }
+
+        .splash-reloaded-text {
+            font-size: 12px; font-weight: 900; letter-spacing: 7px; text-transform: uppercase;
+            margin-top: -5px; margin-bottom: 15px;
+            background: linear-gradient(to right, #ffffff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            opacity: 0; animation: fadeInReloaded 0.8s ease forwards 0.8s;
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+        }
+        @keyframes fadeInReloaded { 0% { transform: translateY(10px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+        .search-bar input { background: transparent; border: none; color: var(--text); width: 100%; font-size: 15px; font-family: 'Outfit'; outline: none; }
+
+        footer {
+            flex-shrink: 0; padding: 12px 15px; text-align: center;
+            border-top: 1px solid var(--border); background: rgba(255,255,255,0.02);
+            color: var(--text); opacity: 0.6; font-size: 11px; font-weight: 600;
+            margin-top: auto;
+        }
+    </style>
+    <base target="_blank">
+</head>
+
+<body oncontextmenu="return false;">
+
+<div id="splash-screen">
+    <img class="splash-logo-img" src="JioStar+ logo.png" alt="Logo">
+    <div class="splash-reloaded-text">RELOADED</div>
+    <div class="loading-bar"></div>
+</div>
+
+<div id="overlay" class="overlay" onclick="toggleMenu()" style="position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); z-index: 1500; display: none;"></div>
+<div id="sidebar" class="sidebar">
+    <div class="sidebar-brand">JioStar <span>+</span></div>
+    <div class="sidebar-tagline">PREMIUM LIVE TV</div>
+    <div class="sidebar-divider"></div>
+    <div class="menu-list">
+        <div class="menu-opt" onclick="handleHome()" tabindex="0" onkeydown="if(event.keyCode===13 || event.keyCode===23 || event.keyCode===66) handleHome()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            Home Feed
+        </div>
+        <div class="menu-opt" id="themeToggleBtn" tabindex="0" onclick="toggleTheme()" onkeydown="if(event.keyCode===13 || event.keyCode===23 || event.keyCode===66) { event.preventDefault(); toggleTheme(); }">
+            <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span id="themeText">Light Mode</span>
+        </div>
+        <div class="menu-opt" onclick="toggleAbout()" tabindex="0" onkeydown="if(event.keyCode===13 || event.keyCode===23 || event.keyCode===66) toggleAbout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            About App
+        </div>
+        <div class="menu-opt tg-custom" onclick="window.open('https://t.me/streamxyash', '_blank')" tabindex="0" onkeydown="if(event.keyCode===13 || event.keyCode===23 || event.keyCode===66) window.open('https://t.me/streamxyash', '_blank')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Join Telegram
+        </div>
+    </div>
+</div>
+
+<div id="aboutModal" class="modal">
+    <div class="modal-header-brand">JioStar <span>+</span><div class="app-version">Version 1.5 </div></div>
+    <div class="dev-card">
+        <div class="dev-avatar"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.4 0 2.5 1.1 2.5 2.5S13.4 12 12 12s-2.5-1.1-2.5-2.5S10.6 7 12 7zm0 10c-2.1 0-4.1-.8-5.6-2.1.2-.8 2.3-1.4 5.6-1.4s5.4.6 5.6 1.4c-1.5 1.3-3.5 2.1-5.6 2.1z"/></svg></div>
+        <div class="dev-meta"><span class="label">DEVELOPER:</span><div class="name">STREAMXYASH</div></div>
+    </div>
+    <div class="feature-list">
+        <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>Superfast 1080P Streaming</span></div>
+        <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 3V5c3.3 0 6 2.7 6 6 0 1-.3 1.9-.7 2.7l1.5 1.5C19.4 14 20 12.6 20 11c0-4.4-3.6-8-8-8zm-6 7c0-1 .3-1.9.7-2.7L5.2 6.8C4.6 8 4 9.4 4 11c0 4.4 3.6 8 8 8v3l4-4-4-4v3c-3.3 0-6-2.7-6-6z"/></svg><span>Auto-sync Engine</span></div>
+        <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg><span>Fast Telegram Support</span></div>
+    </div>
+    <button class="close-modal-btn" onclick="toggleAbout()" tabindex="0">CLOSE</button>
+</div>
+<div id="modalOverlay" class="modal-overlay"></div>
+
+<div class="app-shell">
+    <header>
+        <div class="nav-left">
+            <div class="menu-trigger" onclick="toggleMenu()" tabindex="0" onkeydown="if(event.keyCode===13 || event.keyCode===23 || event.keyCode===66) { event.preventDefault(); toggleMenu(); }">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="15" y2="6"></line><line x1="3" y1="18" x2="18" y2="18"></line></svg>
+            </div>
+            <div class="logo">JioStar <span>+</span></div>
+        </div>
+        <div class="search-icon-btn" onclick="toggleSearch()" tabindex="0" onkeydown="if(event.keyCode===13 || event.keyCode===23 || event.keyCode===66) { event.preventDefault(); toggleSearch(); }">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+    </header>
+
+    <div class="search-tab" id="searchTab">
+        <div class="search-bar"><input type="text" id="searchInput" placeholder="Type channel name..." oninput="doSearch()"></div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stats-left-text">Live Now</div>
+        <div id="channelsCountPill" class="channels-pill">0 Channels</div>
+    </div>
+
+    <div class="chips-wrapper" id="chipsWrapper" style="display: none;">
+        <div class="chips-scroll" id="chipContainer"></div>
+    </div>
+
+    <div id="content-area"></div>
+</div>
+<footer>
+    <p>© Copyright 2026 JioStar+. All rights reserved.</p>
+    <p>Developed with <span style="color:#ff4444;">❤️</span> STREAMXYASH</p>
+</footer>
+
+<script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 67 || e.keyCode == 74)) || (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83))) return false; };
+
+    const API_SOURCES = [
+        "https://lemajekaat.streamxlive.workers.dev/",
+        "https://endless.livenoww.workers.dev/",
+        "https://api.npoint.io/5122554ee81206923fa7"
+    ];
+
+    let masterData = [];
+    let isLaunching = false;
+    let searchDebounce;
+    let currentCategory = 'All';
+
+    // ─── CATEGORY DETECTION ───
+    function getChannelCategory(ch) {
+        const fields = ['group', 'category', 'cat', 'genre', 'type', 'language'];
+        for (const field of fields) {
+            if (ch[field] && String(ch[field]).trim() !== "" && String(ch[field]).toLowerCase() !== "null") {
+                return String(ch[field]).trim();
+            }
+        }
+        const name = (ch.name || ch.channel_name || "").toUpperCase();
+        if (/\b(SPORTS?|CRICKET|FOOTBALL|TEN|ESPN|STARZPLAY|TENNIS|HOCKEY|KABADDI)\b/i.test(name)) return 'Sports';
+        if (/\b(NEWS|AAJ TAK|NDTV|CNN|BBC|REPUBLIC|ABP|INDIA TV|TIMES NOW|LIVE 24|NEWS18)\b/i.test(name)) return 'News';
+        if (/\b(KIDS?|CARTOON|DISNEY|POGO|NICK|CHUTTI|SONY YAY|KUSHI|KOCHU|CHINTU|BABY)\b/i.test(name)) return 'Kids';
+        if (/\b(MOVIES?|CINEMA|MAX|HBO|PICTURES|PIX|MINIPLEX|STAR GOLD|GOLDMINES)\b/i.test(name)) return 'Movies';
+        if (/\b(MUSIC|MTV|VH1|9XM|B4U|ZING)\b/i.test(name)) return 'Music';
+        if (/\b(MARATHI|TAMIL|TELUGU|BANGLA|BENGALI|KANNADA|MALAYALAM|GUJARATI|PUNJABI|ODIA|SUN TV|UDAYA|SURYA|GEMINI|KTV|ASIANET|MAZHAVIL|JAYA|KAIRALI|RAJ)\b/i.test(name)) return 'Regional';
+        if (/\b(STAR PLUS|COLORS|ZEE TV|SONY SAB|STAR BHARAT|DANGAL|BIG MAGIC|SONY PAL|AND TV|STAR UTSAV|SET\b|SAB\b)\b/i.test(name)) return 'Entertainment';
+        return 'Channels';
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // ✅ NEW: Loading spinner HTML
+    // ═══════════════════════════════════════════════════════
+    function getLoadingHTML(text = "Loading Channels") {
+        return `
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">
+                    ${text}
+                    <div class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ─── INIT ───
+    async function init() {
+        const area = document.getElementById('content-area');
+        // ✅ NEW: Show animated loading spinner
+        area.innerHTML = getLoadingHTML("Loading Channels");
+
+        try {
+            const fetchPromises = API_SOURCES.map(async (url) => {
+                try {
+                    const response = await fetch(url + "?v=" + Date.now());
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (Array.isArray(data)) return data;
+                    if (data.channels && Array.isArray(data.channels)) return data.channels;
+                    if (data.data && Array.isArray(data.data)) return data.data;
+                    return [];
+                } catch (err) {
+                    console.error(`Failed to load ${url}:`, err);
+                    return [];
+                }
+            });
+
+            const results = await Promise.all(fetchPromises);
+            const rawData = results.flat().filter(item => item && (item.name || item.channel_name));
+
+            masterData = rawData.map(ch => ({
+                ...ch,
+                name: ch.name || ch.channel_name || "Unknown",
+                logo: ch.logo || ch.channel_logo || "https://img.icons8.com/fluency/96/monitor.png",
+                group: getChannelCategory(ch)
+            }));
+
+            console.log("Total channels:", masterData.length);
+            console.log("Unique categories:", [...new Set(masterData.map(ch => ch.group))]);
+
+            if (masterData.length > 0) {
+                renderChips(masterData);
+                renderGrid(masterData, true);
+            } else {
+                area.innerHTML = `
+                    <div style="text-align:center; padding:50px;">
+                        <div style="color:var(--primary); font-size:40px; margin-bottom:15px;">⚠️</div>
+                        <div style="font-weight:700;">No Channels Found</div>
+                        <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; border-radius:10px; border:none; background:#fff; font-weight:800;">RETRY</button>
+                    </div>`;
+            }
+        } catch (e) {
+            console.error("Initialization Error:", e);
+            area.innerHTML = '<div style="text-align:center; padding:50px;">Critical Error Loading Data</div>';
+        }
+    }
+
+    // ─── RENDER CHIPS (NO COUNT) ───
+    function renderChips(data) {
+        const wrapper = document.getElementById('chipsWrapper');
+        const chipContainer = document.getElementById('chipContainer');
+
+        if (!data || data.length === 0) {
+            wrapper.style.display = 'none';
+            return;
+        }
+
+        wrapper.style.display = 'block';
+
+        const categories = ['All', ...new Set(data.map(ch => ch.group))];
+        const chipOrder = ['All', 'Sports', 'Entertainment', 'Movies', 'News', 'Music', 'Kids', 'Regional', 'Channels'];
+        const sortedCats = categories.sort((a, b) => {
+            const aIdx = chipOrder.indexOf(a);
+            const bIdx = chipOrder.indexOf(b);
+            if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+            if (aIdx === -1) return 1;
+            if (bIdx === -1) return -1;
+            return aIdx - bIdx;
+        });
+
+        chipContainer.innerHTML = sortedCats.map(cat => `
+            <div class="chip ${cat === currentCategory ? 'active' : ''}"
+                 data-category="${cat}"
+                 onclick="filterByCategory('${cat.replace(/'/g, "\\'")}')"
+                 onkeydown="if(event.key==='Enter'||event.keyCode===13)filterByCategory('${cat.replace(/'/g, "\\'")}')"
+                 tabindex="0"
+                 role="button">
+                ${cat}
+            </div>
+        `).join('');
+
+        setTimeout(() => {
+            const activeChip = chipContainer.querySelector('.chip.active');
+            if (activeChip) activeChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }, 100);
+    }
+
+    // ─── FILTER BY CATEGORY ───
+    function filterByCategory(category) {
+        currentCategory = category;
+        const chips = document.querySelectorAll('.chip');
+        chips.forEach(c => c.classList.remove('active'));
+
+        let selectedChip = null;
+        chips.forEach(c => {
+            if (c.dataset.category === category) {
+                c.classList.add('active');
+                selectedChip = c;
+            }
+        });
+
+        if (category === 'All') {
+            renderGrid(masterData, true, 'All');
+        } else {
+            const filtered = masterData.filter(ch => ch.group === category);
+            renderGrid(filtered, false);
+        }
+
+        if (selectedChip) {
+            selectedChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            setTimeout(() => selectedChip.focus(), 100);
+        }
+    }
+
+    // ─── RENDER GRID ───
+    function renderGrid(data, isAllView = false, allTitle = 'All') {
+        const area = document.getElementById('content-area');
+        if (!area) return;
+        area.innerHTML = "";
+
+        const pill = document.getElementById('channelsCountPill');
+        if (data.length > 0) {
+            pill.style.display = "block";
+            pill.innerText = `${data.length} Channels`;
+        } else {
+            pill.style.display = "none";
+        }
+
+        if (isAllView) {
+            const sec = document.createElement('div');
+            sec.innerHTML = `<div class="cat-title">${allTitle}</div><div class="grid"></div>`;
+            const grid = sec.querySelector('.grid');
+
+            data.forEach(ch => {
+                const card = createCard(ch);
+                grid.appendChild(card);
+            });
+            area.appendChild(sec);
+
+            focusFirstCard();
+            return;
+        }
+
+        const grouped = data.reduce((acc, ch) => {
+            const cat = ch.group || "Channels";
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(ch);
+            return acc;
+        }, {});
+
+        const chipOrder = ['Sports', 'Entertainment', 'Movies', 'News', 'Music', 'Kids', 'Regional', 'Channels'];
+        const sortedGroups = Object.entries(grouped).sort((a, b) => {
+            const aIdx = chipOrder.indexOf(a[0]);
+            const bIdx = chipOrder.indexOf(b[0]);
+            if (aIdx === -1 && bIdx === -1) return a[0].localeCompare(b[0]);
+            if (aIdx === -1) return 1;
+            if (bIdx === -1) return -1;
+            return aIdx - bIdx;
+        });
+
+        sortedGroups.forEach(([cat, list]) => {
+            const sec = document.createElement('div');
+            sec.innerHTML = `<div class="cat-title">${cat}</div><div class="grid"></div>`;
+            const grid = sec.querySelector('.grid');
+
+            list.forEach(ch => {
+                const card = createCard(ch);
+                grid.appendChild(card);
+            });
+            area.appendChild(sec);
+        });
+
+        focusFirstCard();
+    }
+
+    // ─── CREATE CARD ───
+    function createCard(ch) {
+    const card = document.createElement('div');
+    card.className = "card";
+    card.tabIndex = "0";
+    card.innerHTML = `<div class="live-dot-wrap"><div class="dot"></div> LIVE</div><div class="card-img"><img src="${ch.logo}" loading="lazy" onerror="this.src='https://img.icons8.com/fluency/96/monitor.png'"></div><div class="card-footer">${ch.name}</div>`;
+
+    const launchStream = () => {
+        if (isLaunching) return;
+        if (!window.AndroidPortal) {
+            alert("Player not available. Please reinstall the app.");
+            return;
+        }
+
+        isLaunching = true;
+        const t = document.getElementById('searchTab');
+        if (t) t.style.display = 'none';
+
+        const streamUrl = ch.mpd_url || ch.m3u8_url || ch.url || ch.channel_url || ch.link || ch.stream_url || "";
+        const base = streamUrl.split('|')[0].split('?')[0] + (streamUrl.includes('?') ? '?' + streamUrl.split('?')[1] : '');
+
+        let cookie = "";
+        if (ch.cookie) cookie = ch.cookie;
+        else if (ch.headers) {
+            cookie = ch.headers.cookie || ch.headers.Cookie || ch.headers.COOKIE || "";
+        }
+
+        const keyId = ch.keyId || ch.kid || ch.key_id || "";
+        const key = ch.key || ch.KID || ch.drm_key || "";
+        const licenseUrl = ch.license_url || ch.licenseUrl || ch.drmLicense || ch.drm_license || "";
+        const allKeys = ch.all_keys || ch.allKeys || ch.allkeys || "";
+
+        const name = String(ch.name || ch.channel_name || "Unknown");
+        // ✅ CHANGED: category is no longer passed to player
+        // const category = ch.group || ch.category || ch.cat || "Channels";  // ← REMOVED
+
+        let license = "";
+        if (allKeys && allKeys !== "null" && allKeys.includes(":")) {
+            license = allKeys;
+        } else if (licenseUrl) {
+            license = licenseUrl;
+        } else if (keyId && key && keyId !== "null" && key !== "null" && keyId !== "" && key !== "") {
+            license = keyId + ":" + key;
+        }
+
+        let urlData;
+        if (streamUrl.includes("|")) {
+            urlData = streamUrl;
+        } else {
+            urlData = base;
+            if (cookie) urlData += "|Cookie=" + cookie;
+            if (license) urlData += "|drmLicense=" + license;
+        }
+
+        console.log("=== LAUNCHING PLAYER ===");
+        console.log("url_data:", urlData);
+        console.log("name:", name);
+
+        try {
+            // ✅ CHANGED: Empty string for category, so player shows only channel name
+            window.AndroidPortal.launchNative(urlData, name, "");
+        } catch (err) {
+            console.error("launchNative error:", err);
+            alert("Player error: " + err.message);
+        }
+
+        setTimeout(() => { isLaunching = false; }, 3000);
+    };
+
+    card.onclick = (e) => { e.preventDefault(); launchStream(); };
+    card.onkeydown = (e) => {
+        if (e.keyCode === 13 || e.keyCode === 66 || e.keyCode === 23) {
+            e.preventDefault();
+            launchStream();
+        }
+    };
+
+    return card;
+}
+
+    function focusFirstCard() {
+        const searchInput = document.getElementById('searchInput');
+        if (document.activeElement !== searchInput && document.body.classList.contains('loaded')) {
+            setTimeout(() => {
+                const first = document.querySelector('.card');
+                if (first) first.focus();
+            }, 150);
+        }
+    }
+
+    // ─── SEARCH TOGGLE ───
+    function toggleSearch() {
+        const t = document.getElementById('searchTab');
+        const input = document.getElementById('searchInput');
+        const isVisible = window.getComputedStyle(t).display !== 'none';
+        if (isVisible) {
+            t.style.display = 'none';
+            input.value = "";
+            renderGrid(masterData, true, 'All');
+        } else {
+            t.style.display = 'block';
+            setTimeout(() => input.focus(), 100);
+        }
+    }
+
+    // ─── MENU ───
+    function toggleMenu() {
+        const s = document.getElementById('sidebar');
+        const o = document.getElementById('overlay');
+        const isOpen = s.classList.contains('open');
+        if (!isOpen) {
+            s.classList.add('open');
+            o.style.display = 'block';
+            setTimeout(() => {
+                const first = s.querySelector('.menu-opt');
+                if (first) first.focus();
+            }, 250);
+        } else {
+            s.classList.remove('open');
+            o.style.display = 'none';
+            const trigger = document.querySelector('.menu-trigger');
+            if (trigger) trigger.focus();
+        }
+    }
+
+    function toggleTheme() {
+        const s = document.getElementById('sidebar');
+        if (s.classList.contains('open')) toggleMenu();
+        const body = document.body;
+        const themeText = document.getElementById('themeText');
+        if (body.classList.contains('light-theme')) {
+            body.classList.remove('light-theme');
+            if (themeText) themeText.innerText = "Light Mode";
+            localStorage.setItem('theme-preference', 'dark');
+        } else {
+            body.classList.add('light-theme');
+            if (themeText) themeText.innerText = "Dark Mode";
+            localStorage.setItem('theme-preference', 'light');
+        }
+    }
+
+    function toggleAbout() {
+        const s = document.getElementById('sidebar');
+        if (s.classList.contains('open')) toggleMenu();
+        document.getElementById('modalOverlay').classList.toggle('show');
+        const m = document.getElementById('aboutModal');
+        const o = document.getElementById('modalOverlay');
+        const isVis = m.style.display === 'block';
+        m.style.display = isVis ? 'none' : 'block';
+        o.style.display = isVis ? 'none' : 'block';
+        if (!isVis) setTimeout(() => m.querySelector('button').focus(), 200);
+    }
+
+    function handleHome() {
+        const s = document.getElementById('sidebar');
+        const o = document.getElementById('overlay');
+        if (s && s.classList.contains('open')) {
+            s.classList.remove('open');
+            if (o) o.style.display = 'none';
+        }
+        const t = document.getElementById('searchTab');
+        const i = document.getElementById('searchInput');
+        if (t) t.style.display = 'none';
+        if (i) i.value = "";
+        currentCategory = 'All';
+        if (masterData.length > 0) {
+            renderChips(masterData);
+            renderGrid(masterData, true, 'All');
+        }
+        window.scrollTo(0,0);
+        setTimeout(() => {
+            const first = document.querySelector('.card');
+            if (first) first.focus();
+        }, 300);
+    }
+
+    function applySavedTheme() {
+        const saved = localStorage.getItem('theme-preference');
+        const themeText = document.getElementById('themeText');
+        if (saved === 'light') {
+            document.body.classList.add('light-theme');
+            if(themeText) themeText.innerText = "Dark Mode";
+        }
+    }
+
+    function doSearch() {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            renderGrid(masterData.filter(ch => ch.name.toLowerCase().includes(q)), true, 'Search');
+        }, 150);
+    }
+
+    // ─── TV DPAD NAVIGATION ───
+    document.addEventListener('keydown', function(e) {
+        const focused = document.activeElement;
+        const chips = document.querySelectorAll('.chip');
+        const cards = document.querySelectorAll('.card');
+
+        if (focused && focused.classList.contains('chip')) {
+            const chipArray = Array.from(chips);
+            const index = chipArray.indexOf(focused);
+
+            if (e.key === 'ArrowRight' || e.keyCode === 39) {
+                e.preventDefault();
+                if (index < chipArray.length - 1) {
+                    chipArray[index + 1].focus();
+                    chipArray[index + 1].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
+                e.preventDefault();
+                if (index > 0) {
+                    chipArray[index - 1].focus();
+                    chipArray[index - 1].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            } else if (e.key === 'ArrowDown' || e.keyCode === 40) {
+                e.preventDefault();
+                const firstCard = document.querySelector('.card');
+                if (firstCard) firstCard.focus();
+            } else if (e.key === 'ArrowUp' || e.keyCode === 38) {
+                e.preventDefault();
+                const searchBtn = document.querySelector('.search-icon-btn');
+                if (searchBtn) searchBtn.focus();
+            }
+        }
+
+        if (focused && focused.classList.contains('card')) {
+            const cardArray = Array.from(cards);
+            const index = cardArray.indexOf(focused);
+            const grid = focused.closest('.grid');
+            if (!grid) return;
+
+            const cardsInGrid = Array.from(grid.querySelectorAll('.card'));
+            const cols = window.innerWidth <= 768 ? 3 : 5;
+            const col = index % cols;
+
+            if (e.key === 'ArrowRight' || e.keyCode === 39) {
+                e.preventDefault();
+                if (col < cols - 1 && index + 1 < cardsInGrid.length) cardsInGrid[index + 1].focus();
+            } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
+                e.preventDefault();
+                if (col > 0) cardsInGrid[index - 1].focus();
+            } else if (e.key === 'ArrowDown' || e.keyCode === 40) {
+                e.preventDefault();
+                const nextIndex = index + cols;
+                if (nextIndex < cardsInGrid.length) cardsInGrid[nextIndex].focus();
+            } else if (e.key === 'ArrowUp' || e.keyCode === 38) {
+                e.preventDefault();
+                const prevIndex = index - cols;
+                if (prevIndex >= 0) {
+                    cardsInGrid[prevIndex].focus();
+                } else {
+                    const firstChip = document.querySelector('.chip');
+                    if (firstChip) firstChip.focus();
+                }
+            }
+        }
+    });
+
+    window.onload = () => {
+        applySavedTheme();
+        init();
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                    document.body.classList.add('loaded');
+                    setTimeout(() => {
+                        const first = document.querySelector('.card');
+                        if (first) first.focus();
+                    }, 400);
+                }, 600);
+            }
+        }, 3000);
+    };
+</script>
+</body>
+</html>
